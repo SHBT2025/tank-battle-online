@@ -44,34 +44,47 @@
     <p>打开多个窗口可测试多人游戏</p>
   </div>
 
+  <canvas id="gameCanvas"></canvas>
+
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
     let players = {};
+    let canvas = document.getElementById('gameCanvas');
+    let ctx = canvas.getContext('2d');
+
+    // 设置画布大小
+    function resizeCanvas() {
+      canvas.width = window.innerWidth * 0.85;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // 绘制玩家
+    function drawPlayers() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      for (let id in players) {
+        const player = players[id];
+        ctx.fillStyle = 'white';
+        ctx.font = '16px Arial';
+        ctx.fillText(player.name, player.x - 20, player.y - 25);
+        
+        // 绘制坦克（简单矩形）
+        ctx.fillStyle = 'green';
+        ctx.fillRect(player.x - 10, player.y - 10, 20, 20);
+      }
+    }
 
     socket.on('playerUpdate', (data) => {
-      // 清除已有的玩家标签
-      document.querySelectorAll('.player-label').forEach(el => el.remove());
-      
-      // 为每个玩家创建标签
-      for (let id in data) {
-        const player = data[id];
-        const label = document.createElement('div');
-        label.className = 'player-label';
-        label.style.position = 'absolute';
-        label.style.color = 'white';
-        label.style.fontSize = '12px';
-        label.style.pointerEvents = 'none';
-        label.textContent = player.name;
-        label.style.left = (player.x - 20) + 'px';
-        label.style.top = (player.y - 25) + 'px';
-        document.body.appendChild(label);
-      }
+      players = data;
+      drawPlayers();
     });
 
     socket.on('removePlayer', (id) => {
-      const label = document.querySelector(`.player-label[data-id="${id}"]`);
-      if (label) label.remove();
+      delete players[id];
+      drawPlayers();
     });
 
     document.addEventListener('keydown', (e) => {
@@ -94,6 +107,9 @@
     } else {
       socket.emit('joinGame', { name: 'Anonymous' });
     }
+
+    // 每帧更新画面
+    setInterval(drawPlayers, 100);
   </script>
 </body>
 </html>
