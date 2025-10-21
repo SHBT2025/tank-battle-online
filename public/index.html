@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>坦克大战 Battle City</title>
+  <style>
+    body { 
+      margin: 0; 
+      overflow: hidden; 
+      background: #000; 
+      font-family: Arial, sans-serif;
+    }
+    canvas { display: block; }
+    #ui {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 15%;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 10px;
+      font-size: 14px;
+    }
+    #instructions {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      color: white;
+      background: rgba(0,0,0,0.5);
+      padding: 10px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <h3>排行榜</h3>
+    <div id="leaderboard">等待玩家加入...</div>
+  </div>
+  
+  <div id="instructions">
+    <p>操作说明:</p>
+    <p>方向键: 移动坦克</p>
+    <p>空格键: 发射炮弹</p>
+    <p>打开多个窗口可测试多人游戏</p>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let players = {};
+
+    socket.on('playerUpdate', (data) => {
+      // 清除已有的玩家标签
+      document.querySelectorAll('.player-label').forEach(el => el.remove());
+      
+      // 为每个玩家创建标签
+      for (let id in data) {
+        const player = data[id];
+        const label = document.createElement('div');
+        label.className = 'player-label';
+        label.style.position = 'absolute';
+        label.style.color = 'white';
+        label.style.fontSize = '12px';
+        label.style.pointerEvents = 'none';
+        label.textContent = player.name;
+        label.style.left = (player.x - 20) + 'px';
+        label.style.top = (player.y - 25) + 'px';
+        document.body.appendChild(label);
+      }
+    });
+
+    socket.on('removePlayer', (id) => {
+      const label = document.querySelector(`.player-label[data-id="${id}"]`);
+      if (label) label.remove();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+        e.preventDefault();
+        switch(e.key) {
+          case 'ArrowUp': socket.emit('move', 'up'); break;
+          case 'ArrowDown': socket.emit('move', 'down'); break;
+          case 'ArrowLeft': socket.emit('move', 'left'); break;
+          case 'ArrowRight': socket.emit('move', 'right'); break;
+          case ' ': socket.emit('fire'); break;
+        }
+      }
+    });
+
+    // 加入游戏
+    const playerName = prompt('请输入你的名字 (最多10个字符):', 'Player' + Math.floor(Math.random()*100));
+    if (playerName) {
+      socket.emit('joinGame', { name: playerName.substring(0, 10) });
+    } else {
+      socket.emit('joinGame', { name: 'Anonymous' });
+    }
+  </script>
+</body>
+</html>
